@@ -26,6 +26,7 @@ class AvoidGame {
         this.playerNameInput = document.getElementById('playerName');
         this.leaderboardList = document.getElementById('leaderboardList');
         this.darkModeToggle = document.getElementById('darkModeToggle');
+        this.easterEggImage = document.getElementById('easterEggImage');
         
         // Dark mode state
         this.isDarkMode = localStorage.getItem('darkMode') === 'true';
@@ -390,21 +391,26 @@ class AvoidGame {
             const medals = ['🥇', '🥈', '🥉'];
             const ranks = ['rank-1', 'rank-2', 'rank-3'];
             
-            snapshot.docs.forEach((doc, index) => {
-                const data = doc.data();
-                const item = document.createElement('div');
-                item.className = `leaderboard-item ${ranks[index]}`;
-                
-                item.innerHTML = `
-                    <div class="leaderboard-rank">
-                        <span class="medal">${medals[index]}</span>
-                        <span class="leaderboard-name">${data.name}</span>
-                    </div>
-                    <div class="leaderboard-time">${data.time.toFixed(2)}s</div>
-                `;
-                
-                this.leaderboardList.appendChild(item);
-            });
+                         snapshot.docs.forEach((doc, index) => {
+                 const data = doc.data();
+                 const item = document.createElement('div');
+                 item.className = `leaderboard-item ${ranks[index]}`;
+                 
+                 item.innerHTML = `
+                     <div class="leaderboard-rank">
+                         <span class="medal">${medals[index]}</span>
+                         <span class="leaderboard-name">${data.name}</span>
+                     </div>
+                     <div class="leaderboard-time">${data.time.toFixed(2)}s</div>
+                 `;
+                 
+                 // Easter egg for specific player name
+                 if (data.name === 'უმი მწვადი') {
+                     this.addEasterEgg(item);
+                 }
+                 
+                 this.leaderboardList.appendChild(item);
+             });
             
         } catch (error) {
             console.error('Error loading leaderboard:', error);
@@ -428,6 +434,16 @@ class AvoidGame {
         } catch (error) {
             console.error('Error clearing leaderboard:', error);
         }
+    }
+    
+    addEasterEgg(leaderboardItem) {
+        leaderboardItem.addEventListener('mouseenter', () => {
+            this.easterEggImage.classList.add('show');
+        });
+        
+        leaderboardItem.addEventListener('mouseleave', () => {
+            this.easterEggImage.classList.remove('show');
+        });
     }
 }
 

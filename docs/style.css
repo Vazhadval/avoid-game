@@ -313,6 +313,26 @@ body {
     box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
 
+/* Easter Egg - Winner Image */
+.easter-egg-image {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    max-width: 300px;
+    max-height: 300px;
+    border-radius: 15px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.easter-egg-image.show {
+    opacity: 1;
+}
+
 .leaderboard-rank {
     display: flex;
     align-items: center;
