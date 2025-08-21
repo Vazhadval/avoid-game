@@ -25,6 +25,11 @@ class AvoidGame {
         this.finalTimeElement = document.getElementById('finalTime');
         this.playerNameInput = document.getElementById('playerName');
         this.leaderboardList = document.getElementById('leaderboardList');
+        this.darkModeToggle = document.getElementById('darkModeToggle');
+        
+        // Dark mode state
+        this.isDarkMode = localStorage.getItem('darkMode') === 'true';
+        this.applyTheme();
         
         // Game state
         this.isGameRunning = false;
@@ -139,10 +144,31 @@ class AvoidGame {
             }
         });
         
+        // Dark mode toggle
+        this.darkModeToggle.addEventListener('click', () => {
+            this.toggleDarkMode();
+        });
+        
         // Prevent context menu on canvas
         this.canvas.addEventListener('contextmenu', (e) => {
             e.preventDefault();
         });
+    }
+    
+    toggleDarkMode() {
+        this.isDarkMode = !this.isDarkMode;
+        localStorage.setItem('darkMode', this.isDarkMode);
+        this.applyTheme();
+    }
+    
+    applyTheme() {
+        if (this.isDarkMode) {
+            document.documentElement.setAttribute('data-theme', 'dark');
+            this.darkModeToggle.querySelector('.toggle-icon').textContent = '☀️';
+        } else {
+            document.documentElement.setAttribute('data-theme', 'light');
+            this.darkModeToggle.querySelector('.toggle-icon').textContent = '🌙';
+        }
     }
     
     showStartScreen() {
@@ -290,7 +316,7 @@ class AvoidGame {
         
         // Draw center indicator (optional)
         if (!this.isGameRunning) {
-            this.ctx.strokeStyle = '#4a5568';
+            this.ctx.strokeStyle = this.isDarkMode ? '#4ecdc4' : '#4a5568';
             this.ctx.lineWidth = 2;
             this.ctx.setLineDash([5, 5]);
             this.ctx.strokeRect(

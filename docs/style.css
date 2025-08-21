@@ -1,3 +1,55 @@
+:root {
+    /* Light mode variables */
+    --bg-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --container-bg: rgba(255, 255, 255, 0.95);
+    --container-shadow: rgba(0, 0, 0, 0.1);
+    --text-color: #333;
+    --title-color: #4a5568;
+    --timer-color: #2d3748;
+    --canvas-bg: #f7fafc;
+    --canvas-border: #4a5568;
+    --instructions-color: #4a5568;
+    --input-bg: rgba(255, 255, 255, 0.9);
+    --input-border: rgba(255, 255, 255, 0.3);
+    --input-text: #333;
+    --input-placeholder: #666;
+    --overlay-bg: rgba(0, 0, 0, 0.8);
+    --modal-bg: rgba(26, 26, 46, 0.85);
+    --modal-border: rgba(78, 205, 196, 0.4);
+    --leaderboard-bg: #1a1a2e;
+    --leaderboard-item-bg: #16213e;
+    --leaderboard-item-hover: #0f3460;
+    --toggle-bg: rgba(255, 255, 255, 0.2);
+    --toggle-border: rgba(255, 255, 255, 0.3);
+    --toggle-hover: rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] {
+    /* Dark mode variables */
+    --bg-gradient: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+    --container-bg: rgba(22, 33, 62, 0.95);
+    --container-shadow: rgba(0, 0, 0, 0.3);
+    --text-color: #e2e8f0;
+    --title-color: #4ecdc4;
+    --timer-color: #e2e8f0;
+    --canvas-bg: #0f1419;
+    --canvas-border: #4ecdc4;
+    --instructions-color: #cbd5e0;
+    --input-bg: rgba(15, 20, 25, 0.9);
+    --input-border: rgba(78, 205, 196, 0.3);
+    --input-text: #e2e8f0;
+    --input-placeholder: #a0aec0;
+    --overlay-bg: rgba(0, 0, 0, 0.9);
+    --modal-bg: rgba(15, 20, 25, 0.95);
+    --modal-border: rgba(78, 205, 196, 0.6);
+    --leaderboard-bg: #0f1419;
+    --leaderboard-item-bg: #1a1a2e;
+    --leaderboard-item-hover: #16213e;
+    --toggle-bg: rgba(78, 205, 196, 0.2);
+    --toggle-border: rgba(78, 205, 196, 0.4);
+    --toggle-hover: rgba(78, 205, 196, 0.3);
+}
+
 * {
     margin: 0;
     padding: 0;
@@ -6,22 +58,24 @@
 
 body {
     font-family: 'Arial', sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--bg-gradient);
     min-height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    color: #333;
+    color: var(--text-color);
+    transition: background 0.3s ease;
 }
 
 .game-container {
-    background: rgba(255, 255, 255, 0.95);
+    background: var(--container-bg);
     border-radius: 20px;
     padding: 30px;
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 40px var(--container-shadow);
     backdrop-filter: blur(10px);
     max-width: 900px;
     width: 100%;
+    transition: all 0.3s ease;
 }
 
 .game-header {
@@ -29,21 +83,58 @@ body {
     margin-bottom: 20px;
 }
 
+.header-top {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
 .game-header h1 {
     font-size: 3rem;
-    color: #4a5568;
-    margin-bottom: 10px;
+    color: var(--title-color);
+    margin-bottom: 0;
     text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
+    transition: color 0.3s ease;
+}
+
+.dark-mode-toggle {
+    background: var(--toggle-bg);
+    border: 2px solid var(--toggle-border);
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    backdrop-filter: blur(10px);
+}
+
+.dark-mode-toggle:hover {
+    background: var(--toggle-hover);
+    transform: scale(1.1);
+}
+
+.toggle-icon {
+    font-size: 1.5rem;
+    transition: transform 0.3s ease;
+}
+
+[data-theme="dark"] .toggle-icon {
+    transform: rotate(180deg);
 }
 
 .timer {
     font-size: 1.5rem;
     font-weight: bold;
-    color: #2d3748;
+    color: var(--timer-color);
     background: linear-gradient(45deg, #ff6b6b, #4ecdc4);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+    transition: color 0.3s ease;
 }
 
 .game-area {
@@ -54,11 +145,12 @@ body {
 }
 
 #gameCanvas {
-    border: 3px solid #4a5568;
+    border: 3px solid var(--canvas-border);
     border-radius: 10px;
-    background: #f7fafc;
+    background: var(--canvas-bg);
     box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
     cursor: default;
+    transition: all 0.3s ease;
 }
 
 .game-overlay {
@@ -67,26 +159,28 @@ body {
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.8);
+    background: var(--overlay-bg);
     display: flex;
     justify-content: center;
     align-items: center;
     border-radius: 10px;
     backdrop-filter: blur(5px);
+    transition: background 0.3s ease;
 }
 
 .overlay-content {
     text-align: center;
     color: white;
     padding: 30px;
-    background: rgba(26, 26, 46, 0.85);
+    background: var(--modal-bg);
     border-radius: 15px;
     backdrop-filter: blur(15px);
-    border: 2px solid rgba(78, 205, 196, 0.4);
+    border: 2px solid var(--modal-border);
     max-width: 500px;
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
+    transition: all 0.3s ease;
 }
 
 .overlay-content h2 {
@@ -134,9 +228,10 @@ body {
 
 .game-instructions {
     text-align: center;
-    color: #4a5568;
+    color: var(--instructions-color);
     font-size: 1.1rem;
     line-height: 1.6;
+    transition: color 0.3s ease;
 }
 
 .hidden {
@@ -152,12 +247,12 @@ body {
 }
 
 #playerName {
-    background: rgba(255, 255, 255, 0.9);
-    border: 2px solid rgba(255, 255, 255, 0.3);
+    background: var(--input-bg);
+    border: 2px solid var(--input-border);
     border-radius: 25px;
     padding: 12px 20px;
     font-size: 1.1rem;
-    color: #333;
+    color: var(--input-text);
     text-align: center;
     width: 250px;
     transition: all 0.3s ease;
@@ -170,17 +265,18 @@ body {
 }
 
 #playerName::placeholder {
-    color: #666;
+    color: var(--input-placeholder);
 }
 
 .leaderboard {
     margin-top: 25px;
     padding: 20px;
-    background: #1a1a2e;
+    background: var(--leaderboard-bg);
     border-radius: 15px;
     border: 2px solid #4ecdc4;
     min-width: 350px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+    transition: all 0.3s ease;
 }
 
 .leaderboard h3 {
@@ -200,7 +296,7 @@ body {
     align-items: center;
     justify-content: space-between;
     padding: 12px 18px;
-    background: #16213e;
+    background: var(--leaderboard-item-bg);
     border-radius: 12px;
     border: 1px solid #4ecdc4;
     margin-bottom: 8px;
@@ -208,7 +304,7 @@ body {
 }
 
 .leaderboard-item:hover {
-    background: #0f3460;
+    background: var(--leaderboard-item-hover);
     transform: translateY(-1px);
     box-shadow: 0 4px 15px rgba(78, 205, 196, 0.3);
 }
@@ -274,6 +370,15 @@ body {
     
     .game-header h1 {
         font-size: 2rem;
+    }
+    
+    .dark-mode-toggle {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .toggle-icon {
+        font-size: 1.2rem;
     }
     
     #gameCanvas {
