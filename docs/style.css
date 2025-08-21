@@ -177,6 +177,7 @@ body {
     backdrop-filter: blur(15px);
     border: 2px solid var(--modal-border);
     max-width: 500px;
+    min-height: 600px;
     max-height: 80vh;
     overflow-y: auto;
     box-shadow: 0 15px 40px rgba(0, 0, 0, 0.5);
@@ -275,7 +276,7 @@ body {
     border-radius: 15px;
     border: 2px solid #4ecdc4;
     min-width: 350px;
-    min-height: 200px;
+    min-height: 250px;
     box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
     transition: all 0.3s ease;
 }
@@ -290,7 +291,7 @@ body {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    min-height: 150px;
+    min-height: 200px;
     justify-content: center;
 }
 
@@ -366,7 +367,7 @@ body {
     align-items: center;
     justify-content: center;
     height: 100%;
-    min-height: 150px;
+    min-height: 250px;
 }
 
 /* Responsive design */
