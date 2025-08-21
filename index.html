@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Avoid Game</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>Avoid</h1>
+            <div class="timer">Time: <span id="timer">0.00</span> seconds</div>
+        </div>
+        
+        <div class="game-area">
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            
+            <div class="game-overlay" id="gameOverlay">
+                <div class="overlay-content">
+                    <h2 id="overlayTitle">Avoid the enemies!</h2>
+                    <p id="overlayMessage">Enter your name and start the game!</p>
+                    
+                    <div class="name-input-container">
+                        <input type="text" id="playerName" placeholder="Enter your name" maxlength="20">
+                    </div>
+                    
+                    <button id="startButton">Start Game</button>
+                    <div id="finalTime" class="final-time"></div>
+                    
+                    <div class="leaderboard" id="leaderboard">
+                        <h3>🏆 Top Players</h3>
+                        <div id="leaderboardList"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-instructions">
+            <p>Use your mouse to move the hero square. Avoid the enemy rectangles and the canvas edges!</p>
+        </div>
+    </div>
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
