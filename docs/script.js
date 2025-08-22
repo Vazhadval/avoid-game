@@ -196,8 +196,10 @@ class AvoidGame {
         this.overlayTitle.textContent = 'Avoid the enemies!';
         this.overlayMessage.textContent = 'Enter your name and start the game!';
         this.startButton.textContent = 'Start Game';
+        this.startButton.disabled = false;
         this.finalTimeElement.textContent = '';
         this.playerNameInput.style.display = 'block';
+        this.playerNameInput.disabled = false;
         this.playerNameInput.focus();
     }
     
@@ -206,8 +208,10 @@ class AvoidGame {
         this.overlayTitle.textContent = 'Game Over!';
         this.overlayMessage.textContent = 'You hit an enemy or the wall. Try again!';
         this.startButton.textContent = 'Play Again';
+        this.startButton.disabled = false;
         this.finalTimeElement.textContent = `Survived: ${this.currentTime.toFixed(2)} seconds`;
         this.playerNameInput.style.display = 'block';
+        this.playerNameInput.disabled = false;
         
         // Save score to leaderboard
         this.saveScore();
@@ -221,6 +225,11 @@ class AvoidGame {
             this.playerNameInput.focus();
             return;
         }
+        
+        // Show loading state
+        this.startButton.textContent = 'Loading...';
+        this.startButton.disabled = true;
+        this.playerNameInput.disabled = true;
         
         // Create game session before starting
         this.createGameSession().then(() => {
@@ -246,6 +255,11 @@ class AvoidGame {
         }).catch((error) => {
             console.error('Error creating game session:', error);
             alert('Failed to start game. Please try again.');
+            
+            // Reset button state on error
+            this.startButton.textContent = 'Start Game';
+            this.startButton.disabled = false;
+            this.playerNameInput.disabled = false;
         });
     }
     
