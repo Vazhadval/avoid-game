@@ -38,6 +38,8 @@ class AvoidGame {
         this.currentTime = 0;
         this.gameLoop = null;
         this.playerName = '';
+        this.currentGameId = null; // Track current game session
+        this.gameSessionDocRef = null; // Reference to the current game session document
         
         // Game settings
         this.canvasWidth = 400; // Easy to adjust canvas width here
@@ -72,8 +74,18 @@ class AvoidGame {
         // Event listeners
         this.setupEventListeners();
         
+        // Handle page unload - the cleanup function will handle abandoned sessions
+        window.addEventListener('beforeunload', () => {
+            if (this.isGameRunning && this.currentGameId) {
+                console.log('Game session will be cleaned up by maintenance function');
+            }
+        });
+        
         // Load leaderboard
         this.loadLeaderboard();
+        
+        // Clean up old game sessions on startup
+        this.cleanupOldGameSessions();
         
         // Start with overlay visible
         this.showStartScreen();
@@ -82,6 +94,13 @@ class AvoidGame {
     getRandomSpeed() {
         // Returns constant speed with random direction (positive or negative)
         return Math.random() < 0.5 ? this.enemySpeed : -this.enemySpeed;
+    }
+    
+    generateGameId() {
+        // Generate a unique game ID using timestamp and random string
+        const timestamp = Date.now();
+        const randomStr = Math.random().toString(36).substring(2, 15);
+        return `game_${timestamp}_${randomStr}`;
     }
     
     initializeEnemies() {
@@ -203,25 +222,31 @@ class AvoidGame {
             return;
         }
         
-        this.isGameRunning = true;
-        this.startTime = Date.now();
-        this.currentTime = 0;
-        this.gameOverlay.classList.add('hidden');
-        
-        // Reset hero position
-        this.hero.x = this.canvasWidth / 2;
-        this.hero.y = this.canvasHeight / 2;
-        this.mouseX = this.hero.x;
-        this.mouseY = this.hero.y;
-        
-        // Reset enemies
-        this.initializeEnemies();
-        
-        // Start game loop
-        this.gameLoop = setInterval(() => {
-            this.update();
-            this.draw();
-        }, 1000 / 60); // 60 FPS
+        // Create game session before starting
+        this.createGameSession().then(() => {
+            this.isGameRunning = true;
+            this.startTime = Date.now();
+            this.currentTime = 0;
+            this.gameOverlay.classList.add('hidden');
+            
+            // Reset hero position
+            this.hero.x = this.canvasWidth / 2;
+            this.hero.y = this.canvasHeight / 2;
+            this.mouseX = this.hero.x;
+            this.mouseY = this.hero.y;
+            
+            // Reset enemies
+            this.initializeEnemies();
+            
+            // Start game loop
+            this.gameLoop = setInterval(() => {
+                this.update();
+                this.draw();
+            }, 1000 / 60); // 60 FPS
+        }).catch((error) => {
+            console.error('Error creating game session:', error);
+            alert('Failed to start game. Please try again.');
+        });
     }
     
     endGame() {
@@ -330,55 +355,165 @@ class AvoidGame {
         }
     }
     
-    // Firebase Leaderboard Functions
-    async saveScore() {
-        if (!this.playerName || this.currentTime <= 0) return;
-        
+    // Game Session Management Functions
+    async createGameSession() {
         try {
-            // Check if player already has a score
-            const existingScore = await db.collection('leaderboard')
-                .where('name', '==', this.playerName)
-                .limit(1)
-                .get();
+            this.currentGameId = this.generateGameId();
             
-            if (!existingScore.empty) {
-                const existingData = existingScore.docs[0].data();
-                const existingTime = existingData.time;
-                
-                // Only update if new time is better (higher)
-                if (this.currentTime > existingTime) {
-                    await existingScore.docs[0].ref.update({
-                        time: this.currentTime,
-                        timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                    console.log('Better score updated successfully!');
-                } else {
-                    console.log('New score is not better than existing score');
-                }
-            } else {
-                // Player doesn't exist, add new entry
-                await db.collection('leaderboard').add({
-                    name: this.playerName,
-                    time: this.currentTime,
-                    timestamp: firebase.firestore.FieldValue.serverTimestamp()
-                });
-                console.log('New player score saved successfully!');
-            }
+            // Create a new game session document
+            this.gameSessionDocRef = await db.collection('gameSessions').add({
+                gameId: this.currentGameId,
+                playerName: this.playerName,
+                status: 'active',
+                startTime: firebase.firestore.FieldValue.serverTimestamp(),
+                endTime: null,
+                finalTime: null,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
             
-            // Reload leaderboard after saving
-            this.loadLeaderboard();
+            console.log('Game session created:', this.currentGameId);
         } catch (error) {
-            console.error('Error saving score:', error);
+            console.error('Error creating game session:', error);
+            throw error;
         }
     }
     
+    async finishGameSession() {
+        if (!this.gameSessionDocRef || !this.currentGameId) {
+            console.error('No active game session to finish');
+            return;
+        }
+        
+        try {
+            // Update the game session to finished status with final time
+            await this.gameSessionDocRef.update({
+                status: 'finished',
+                endTime: firebase.firestore.FieldValue.serverTimestamp(),
+                finalTime: this.currentTime
+            });
+            
+            console.log('Game session finished:', this.currentGameId);
+        } catch (error) {
+            console.error('Error finishing game session:', error);
+            throw error;
+        }
+    }
+
+    // Firebase Game Session Functions
+    async saveScore() {
+        if (!this.playerName || this.currentTime <= 0 || !this.currentGameId) {
+            console.error('Invalid score submission: Missing required data');
+            return;
+        }
+        
+        try {
+            // Simple validation: Check if gameId exists and is active
+            const isValid = await this.validateGameIdAndStatus(this.currentGameId);
+            if (!isValid) {
+                console.error('Security violation: Invalid game session - score rejected');
+                alert('Invalid game session. Score not saved.');
+                return;
+            }
+            
+            // Finish the game session with the final time
+            await this.finishGameSession();
+            
+            // Clear current game session data
+            this.currentGameId = null;
+            this.gameSessionDocRef = null;
+            
+            // Reload leaderboard after saving
+            this.loadLeaderboard();
+            
+            console.log('Game session completed and saved successfully!');
+        } catch (error) {
+            console.error('Error saving game session:', error);
+        }
+    }
+    
+
+    
+    // Clean up old game sessions (maintenance function)
+    async cleanupOldGameSessions() {
+        try {
+            // Get all active sessions first (single field query - no index needed)
+            const activeSessions = await db.collection('gameSessions')
+                .where('status', '==', 'active')
+                .get();
+            
+            if (activeSessions.empty) {
+                console.log('No active sessions to cleanup');
+                return;
+            }
+            
+            const oneHourAgo = Date.now() - 60 * 60 * 1000; // 1 hour ago in milliseconds
+            const batch = db.batch();
+            let cleanupCount = 0;
+            
+            // Filter old sessions on the client side
+            activeSessions.docs.forEach((doc) => {
+                const data = doc.data();
+                const createdAt = data.createdAt?.toMillis();
+                
+                // Check if session is older than 1 hour
+                if (createdAt && createdAt < oneHourAgo) {
+                    batch.update(doc.ref, {
+                        status: 'abandoned',
+                        endTime: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                    cleanupCount++;
+                }
+            });
+            
+            if (cleanupCount > 0) {
+                await batch.commit();
+                console.log(`Cleaned up ${cleanupCount} abandoned game sessions`);
+            } else {
+                console.log('No old sessions found to cleanup');
+            }
+        } catch (error) {
+            console.error('Error cleaning up old game sessions:', error);
+        }
+    }
+
+    
+    // Simple validation: Check if gameId exists and is active
+    async validateGameIdAndStatus(gameId) {
+        if (!gameId) {
+            console.error('Validation failed: No gameId provided');
+            return false;
+        }
+        
+        try {
+            // Check 1: Game exists
+            // Check 2: Game status is 'active'
+            const gameSession = await db.collection('gameSessions')
+                .where('gameId', '==', gameId)
+                .where('status', '==', 'active')
+                .limit(1)
+                .get();
+            
+            if (gameSession.empty) {
+                console.error(`Validation failed: gameId ${gameId} does not exist or is not active`);
+                return false;
+            }
+            
+            console.log(`Validation passed: gameId ${gameId} exists and is active`);
+            return true;
+        } catch (error) {
+            console.error('Validation error:', error);
+            return false;
+        }
+    }
+
+
     async loadLeaderboard() {
         try {
             this.leaderboardList.innerHTML = '<div class="loading-leaderboard">Loading leaderboard...</div>';
             
-            const snapshot = await db.collection('leaderboard')
-                .orderBy('time', 'desc')
-                .limit(3)
+            // Get all finished game sessions (single field query - no index needed)
+            const snapshot = await db.collection('gameSessions')
+                .where('status', '==', 'finished')
                 .get();
             
             this.leaderboardList.innerHTML = '';
@@ -388,29 +523,70 @@ class AvoidGame {
                 return;
             }
             
+            // Process and sort on client side
+            const allFinishedGames = [];
+            snapshot.docs.forEach((doc) => {
+                const data = doc.data();
+                if (data.finalTime && data.finalTime > 0) {
+                    allFinishedGames.push({
+                        playerName: data.playerName,
+                        finalTime: data.finalTime,
+                        gameId: data.gameId
+                    });
+                }
+            });
+            
+            // Sort by finalTime descending (client-side)
+            allFinishedGames.sort((a, b) => b.finalTime - a.finalTime);
+            
+            // Group by player name to show only best score per player
+            const playerBestScores = new Map();
+            
+            allFinishedGames.forEach((game) => {
+                const playerName = game.playerName;
+                const finalTime = game.finalTime;
+                
+                if (!playerBestScores.has(playerName) || playerBestScores.get(playerName).finalTime < finalTime) {
+                    playerBestScores.set(playerName, {
+                        name: playerName,
+                        time: finalTime,
+                        gameId: game.gameId
+                    });
+                }
+            });
+            
+            // Convert to array and get top 3
+            const topPlayers = Array.from(playerBestScores.values())
+                .sort((a, b) => b.time - a.time)
+                .slice(0, 3);
+            
+            if (topPlayers.length === 0) {
+                this.leaderboardList.innerHTML = '<div class="loading-leaderboard">No valid scores yet. Be the first!</div>';
+                return;
+            }
+            
             const medals = ['🥇', '🥈', '🥉'];
             const ranks = ['rank-1', 'rank-2', 'rank-3'];
             
-                         snapshot.docs.forEach((doc, index) => {
-                 const data = doc.data();
-                 const item = document.createElement('div');
-                 item.className = `leaderboard-item ${ranks[index]}`;
-                 
-                 item.innerHTML = `
-                     <div class="leaderboard-rank">
-                         <span class="medal">${medals[index]}</span>
-                         <span class="leaderboard-name">${data.name}</span>
-                     </div>
-                     <div class="leaderboard-time">${data.time.toFixed(2)}s</div>
-                 `;
-                 
-                 // Easter egg for specific player name
-                 if (data.name === 'უმი მწვადი') {
-                     this.addEasterEgg(item);
-                 }
-                 
-                 this.leaderboardList.appendChild(item);
-             });
+            topPlayers.forEach((player, index) => {
+                const item = document.createElement('div');
+                item.className = `leaderboard-item ${ranks[index]}`;
+                
+                item.innerHTML = `
+                    <div class="leaderboard-rank">
+                        <span class="medal">${medals[index]}</span>
+                        <span class="leaderboard-name">${player.name}</span>
+                    </div>
+                    <div class="leaderboard-time">${player.time.toFixed(2)}s</div>
+                `;
+                
+                // Easter egg for specific player name
+                if (player.name === 'უმი მწვადი') {
+                    this.addEasterEgg(item);
+                }
+                
+                this.leaderboardList.appendChild(item);
+            });
             
         } catch (error) {
             console.error('Error loading leaderboard:', error);
@@ -418,10 +594,36 @@ class AvoidGame {
         }
     }
     
-    // Temporary function to clear all leaderboard data
-    async clearLeaderboard() {
+    // Get game statistics
+    async getGameStatistics() {
         try {
-            const snapshot = await db.collection('leaderboard').get();
+            const allSessions = await db.collection('gameSessions').get();
+            const finishedSessions = allSessions.docs.filter(doc => doc.data().status === 'finished');
+            
+            const stats = {
+                totalGames: allSessions.size,
+                completedGames: finishedSessions.length,
+                averageTime: 0,
+                bestTime: 0
+            };
+            
+            if (finishedSessions.length > 0) {
+                const times = finishedSessions.map(doc => doc.data().finalTime);
+                stats.averageTime = times.reduce((a, b) => a + b, 0) / times.length;
+                stats.bestTime = Math.max(...times);
+            }
+            
+            console.log('Game Statistics:', stats);
+            return stats;
+        } catch (error) {
+            console.error('Error getting game statistics:', error);
+        }
+    }
+
+    // Temporary function to clear all game sessions
+    async clearGameSessions() {
+        try {
+            const snapshot = await db.collection('gameSessions').get();
             const batch = db.batch();
             
             snapshot.docs.forEach((doc) => {
@@ -429,10 +631,9 @@ class AvoidGame {
             });
             
             await batch.commit();
-            console.log('Leaderboard cleared successfully!');
-            this.loadLeaderboard(); // Reload to show empty state
+            console.log('Game sessions cleared successfully!');
         } catch (error) {
-            console.error('Error clearing leaderboard:', error);
+            console.error('Error clearing game sessions:', error);
         }
     }
     

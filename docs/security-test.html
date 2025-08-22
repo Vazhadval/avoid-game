@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Game Session Security Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .test-section {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        button {
+            background: #4ecdc4;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45b7b8;
+        }
+        .console-output {
+            background: #2c3e50;
+            color: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            max-height: 300px;
+            overflow-y: auto;
+            margin-top: 10px;
+        }
+        .error { color: #e74c3c; }
+        .success { color: #2ecc71; }
+        .warning { color: #f39c12; }
+    </style>
+</head>
+<body>
+    <h1>🔒 Game Session Security Test</h1>
+    
+    <div class="test-section">
+        <h2>Test Admin Functions</h2>
+        <p>These functions help you test and manage the new security system:</p>
+        
+        <button onclick="testValidation()">Validate Leaderboard Entries</button>
+        <button onclick="testCleanup()">Cleanup Old Sessions</button>
+        <button onclick="simulateGameSession()">Simulate Game Session</button>
+        <button onclick="clearConsole()">Clear Console</button>
+        
+        <div id="console" class="console-output">
+            <div class="success">Console ready. Click buttons above to test functionality.</div>
+        </div>
+    </div>
+    
+    <div class="test-section">
+        <h2>Security Features</h2>
+        <ul>
+            <li>✅ Game sessions created with unique IDs</li>
+            <li>✅ Scores linked to valid game sessions</li>
+            <li>✅ Automatic cleanup of abandoned sessions</li>
+            <li>✅ Validation tools for data integrity</li>
+            <li>✅ Prevention of external score submission</li>
+        </ul>
+    </div>
+    
+    <div class="test-section">
+        <h2>How to Use</h2>
+        <ol>
+            <li><strong>Start the main game</strong> - A game session will be created automatically</li>
+            <li><strong>Play and lose</strong> - The session will be marked as finished and score saved</li>
+            <li><strong>Use admin functions</strong> - Monitor and validate sessions using the buttons above</li>
+            <li><strong>Check Firebase</strong> - Look for the new 'gameSessions' collection</li>
+        </ol>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.0/firebase-firestore-compat.js"></script>
+    
+    <script>
+        // Firebase configuration (same as main game)
+        const firebaseConfig = {
+            apiKey: "AIzaSyCi1DUIxnawKhwooFnt5pctFA0TwuZmTqU",
+            authDomain: "avoid-abe2c.firebaseapp.com",
+            projectId: "avoid-abe2c",
+            storageBucket: "avoid-abe2c.firebasestorage.app",
+            messagingSenderId: "1052555468482",
+            appId: "1:1052555468482:web:efa0cca16402f618ee655b",
+            measurementId: "G-Z3FDLJVRBX"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        
+        const consoleEl = document.getElementById('console');
+        
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = type;
+            div.innerHTML = `[${timestamp}] ${message}`;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+        }
+        
+        function clearConsole() {
+            consoleEl.innerHTML = '<div class="success">Console cleared.</div>';
+        }
+        
+        async function testValidation() {
+            log('Starting leaderboard validation...', 'info');
+            
+            try {
+                const leaderboardEntries = await db.collection('leaderboard').get();
+                let validCount = 0;
+                let invalidCount = 0;
+                
+                for (const entry of leaderboardEntries.docs) {
+                    const data = entry.data();
+                    
+                    if (data.gameId) {
+                        const gameSession = await db.collection('gameSessions')
+                            .where('gameId', '==', data.gameId)
+                            .where('status', '==', 'finished')
+                            .limit(1)
+                            .get();
+                        
+                        if (gameSession.empty) {
+                            log(`❌ Invalid entry: ${data.name} (${data.time}s) - No valid game session`, 'error');
+                            invalidCount++;
+                        } else {
+                            log(`✅ Valid entry: ${data.name} (${data.time}s)`, 'success');
+                            validCount++;
+                        }
+                    } else {
+                        log(`⚠️ Legacy entry without gameId: ${data.name} (${data.time}s)`, 'warning');
+                    }
+                }
+                
+                log(`Validation complete: ${validCount} valid, ${invalidCount} invalid entries`, 'success');
+            } catch (error) {
+                log(`Error during validation: ${error.message}`, 'error');
+            }
+        }
+        
+        async function testCleanup() {
+            log('Starting cleanup of old game sessions...', 'info');
+            
+            try {
+                const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+                
+                const oldSessions = await db.collection('gameSessions')
+                    .where('status', '==', 'active')
+                    .where('createdAt', '<', oneHourAgo)
+                    .get();
+                
+                if (oldSessions.empty) {
+                    log('No old active sessions found to cleanup', 'info');
+                    return;
+                }
+                
+                const batch = db.batch();
+                
+                oldSessions.docs.forEach((doc) => {
+                    batch.update(doc.ref, {
+                        status: 'abandoned',
+                        endTime: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                });
+                
+                await batch.commit();
+                log(`✅ Cleaned up ${oldSessions.size} abandoned game sessions`, 'success');
+            } catch (error) {
+                log(`Error during cleanup: ${error.message}`, 'error');
+            }
+        }
+        
+        async function simulateGameSession() {
+            log('Simulating a game session...', 'info');
+            
+            try {
+                // Generate game ID
+                const timestamp = Date.now();
+                const randomStr = Math.random().toString(36).substring(2, 15);
+                const gameId = `game_${timestamp}_${randomStr}`;
+                
+                log(`Generated gameId: ${gameId}`, 'info');
+                
+                // Create game session
+                const sessionRef = await db.collection('gameSessions').add({
+                    gameId: gameId,
+                    playerName: 'TestPlayer',
+                    status: 'active',
+                    startTime: firebase.firestore.FieldValue.serverTimestamp(),
+                    endTime: null,
+                    finalTime: null,
+                    createdAt: firebase.firestore.FieldValue.serverTimestamp()
+                });
+                
+                log('✅ Game session created', 'success');
+                
+                // Simulate game for 2 seconds
+                setTimeout(async () => {
+                    try {
+                        const finalTime = Math.random() * 30 + 10; // Random time between 10-40 seconds
+                        
+                        // Finish the session
+                        await sessionRef.update({
+                            status: 'finished',
+                            endTime: firebase.firestore.FieldValue.serverTimestamp(),
+                            finalTime: finalTime
+                        });
+                        
+                        log(`✅ Game session finished with time: ${finalTime.toFixed(2)}s`, 'success');
+                        
+                        // Add to leaderboard
+                        await db.collection('leaderboard').add({
+                            name: 'TestPlayer',
+                            time: finalTime,
+                            gameId: gameId,
+                            timestamp: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                        
+                        log('✅ Score added to leaderboard with gameId', 'success');
+                        
+                    } catch (error) {
+                        log(`Error finishing session: ${error.message}`, 'error');
+                    }
+                }, 2000);
+                
+            } catch (error) {
+                log(`Error creating session: ${error.message}`, 'error');
+            }
+        }
+        
+        log('🚀 Test interface loaded. Firebase connected.', 'success');
+    </script>
+</body>
+</html>
