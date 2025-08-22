@@ -77,7 +77,7 @@ class AvoidGame {
         // Handle page unload - the cleanup function will handle abandoned sessions
         window.addEventListener('beforeunload', () => {
             if (this.isGameRunning && this.currentGameId) {
-                console.log('Game session will be cleaned up by maintenance function');
+                // Game session will be cleaned up by maintenance function
             }
         });
         
@@ -371,7 +371,6 @@ class AvoidGame {
                 createdAt: firebase.firestore.FieldValue.serverTimestamp()
             });
             
-            console.log('Game session created:', this.currentGameId);
         } catch (error) {
             console.error('Error creating game session:', error);
             throw error;
@@ -392,7 +391,6 @@ class AvoidGame {
                 finalTime: this.currentTime
             });
             
-            console.log('Game session finished:', this.currentGameId);
         } catch (error) {
             console.error('Error finishing game session:', error);
             throw error;
@@ -425,7 +423,6 @@ class AvoidGame {
             // Reload leaderboard after saving
             this.loadLeaderboard();
             
-            console.log('Game session completed and saved successfully!');
         } catch (error) {
             console.error('Error saving game session:', error);
         }
@@ -442,7 +439,6 @@ class AvoidGame {
                 .get();
             
             if (activeSessions.empty) {
-                console.log('No active sessions to cleanup');
                 return;
             }
             
@@ -467,9 +463,6 @@ class AvoidGame {
             
             if (cleanupCount > 0) {
                 await batch.commit();
-                console.log(`Cleaned up ${cleanupCount} abandoned game sessions`);
-            } else {
-                console.log('No old sessions found to cleanup');
             }
         } catch (error) {
             console.error('Error cleaning up old game sessions:', error);
@@ -498,7 +491,6 @@ class AvoidGame {
                 return false;
             }
             
-            console.log(`Validation passed: gameId ${gameId} exists and is active`);
             return true;
         } catch (error) {
             console.error('Validation error:', error);
@@ -613,7 +605,6 @@ class AvoidGame {
                 stats.bestTime = Math.max(...times);
             }
             
-            console.log('Game Statistics:', stats);
             return stats;
         } catch (error) {
             console.error('Error getting game statistics:', error);
@@ -631,7 +622,6 @@ class AvoidGame {
             });
             
             await batch.commit();
-            console.log('Game sessions cleared successfully!');
         } catch (error) {
             console.error('Error clearing game sessions:', error);
         }
